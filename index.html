@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#07070a">
+<title>Namaz Dashboard V5</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070a;--panel:#0d0d11;--panel2:#121218;--border:#24242d;
+  --text:#f5f5f7;--muted:#8b8b96;--purple:#a56cff;--purple2:#bb82ff;
+  --danger:#ff7070;--success:#72d69a;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+body{overflow-x:hidden}
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+
+.app{min-height:100vh;padding:18px;max-width:1600px;margin:auto}
+.screen{display:none;min-height:calc(100vh - 36px)}
+.screen.active{display:block}
+
+/* Dashboard */
+.dashboard-grid{
+  display:grid;grid-template-columns:270px 1fr;grid-template-rows:auto 1fr 70px;
+  gap:16px;min-height:calc(100vh - 36px)
+}
+.left-panel,.panel,.card,.bottom-nav{
+  background:var(--panel);border:1px solid var(--border);border-radius:24px
+}
+.left-panel{grid-row:1/3;padding:26px;display:flex;flex-direction:column;justify-content:space-between}
+.moon{font-size:30px;color:var(--purple);margin-bottom:22px}
+.clock{font-size:clamp(52px,5vw,82px);font-weight:300;letter-spacing:-4px}
+.date{margin-top:10px;color:#d7d7dc;font-size:18px;line-height:1.5}
+.line{height:2px;background:var(--purple);opacity:.45;margin:22px 0}
+.small-title,.section-title{color:var(--purple2);font-size:12px;font-weight:700;letter-spacing:1px}
+.next-prayer{font-size:25px;margin:10px 0 6px}
+.countdown{color:var(--purple);font-size:14px}
+.mosque{text-align:center;font-size:78px;opacity:.8}
+
+.prayer-panel{padding:22px}
+.panel-title{color:var(--purple2);font-size:15px;font-weight:700;margin-bottom:18px}
+.location{float:right;color:var(--muted);font-size:11px;font-weight:400}
+.prayers{display:grid;grid-template-columns:repeat(6,1fr)}
+.prayer{text-align:center;border-right:1px solid var(--border);padding:4px 8px}
+.prayer:last-child{border-right:0}
+.prayer-icon{font-size:27px;margin-bottom:9px}
+.prayer-name{font-size:14px;color:#ddd}
+.prayer-time{font-size:24px;margin-top:7px}
+.prayer.active .prayer-name,.prayer.active .prayer-time{color:var(--purple)}
+.status{margin-top:12px;color:var(--muted);font-size:11px;min-height:14px}
+
+.content-grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:16px;margin-top:0}
+.card{padding:22px;min-height:310px}
+.plan-list{max-height:215px;overflow:auto}
+.plan{display:grid;grid-template-columns:52px 1fr 30px;gap:9px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.plan:last-child{border-bottom:0}
+.plan-time{color:#aaa;font-size:13px}.plan-title{font-size:15px}.plan-location{color:#777;font-size:11px;margin-top:4px}
+.delete-plan{background:none;border:0;color:#666;font-size:20px}.delete-plan:hover{color:var(--danger)}
+.empty{text-align:center;color:#666;padding:28px 8px}
+.form-row{display:flex;gap:7px;margin-top:7px}
+.input,.select{
+  width:100%;background:#17171d;border:1px solid #2a2a33;color:white;border-radius:10px;padding:10px;outline:none
+}
+.input:focus,.select:focus{border-color:var(--purple)}
+.add-button,.primary{
+  width:100%;border:0;background:var(--purple);color:white;border-radius:10px;padding:11px;font-weight:700;margin-top:7px
+}
+.add-button:hover,.primary:hover{background:#b17aff}
+.quote-card{display:flex;flex-direction:column;justify-content:space-between}
+.quote-symbol{font-size:52px;color:#9c63ec}.quote{text-align:center;font-size:22px;line-height:1.45;padding:8px}.author{text-align:center;color:var(--purple);font-size:13px}
+.dots{text-align:center}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#333;margin:4px}.dot.active{background:var(--purple)}
+.calendar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.calendar-header button{border:0;background:none;color:#ddd;font-size:25px}
+.calendar-month{font-size:16px}.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
+.calendar-day-name{color:#777;font-size:11px}.calendar-day{min-height:30px;padding:6px 0;border-radius:50%;font-size:12px;cursor:pointer}
+.calendar-day:hover{background:#202027}.today{background:var(--purple)!important}.selected-day{outline:1px solid var(--purple)}
+.calendar-dot{display:block;color:var(--purple);font-size:7px;line-height:7px}
+.bottom-nav{grid-column:2;display:grid;grid-template-columns:repeat(4,1fr);align-items:center;overflow:hidden}
+.nav-item{height:100%;border:0;border-right:1px solid var(--border);background:transparent;color:#aaa;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.nav-item:last-child{border-right:0}.nav-item:hover,.nav-item.active{background:#14141a;color:white}.nav-icon{font-size:20px}.nav-label{font-size:11px}
+
+/* Secondary screens */
+.secondary{max-width:1100px;margin:auto}
+.secondary-shell{min-height:calc(100vh - 36px);background:var(--panel);border:1px solid var(--border);border-radius:24px;padding:24px}
+.screen-header{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.back{width:44px;height:44px;border:1px solid var(--border);background:#17171d;color:white;border-radius:12px;font-size:24px}
+.screen-title{font-size:24px;color:var(--purple2);font-weight:700}.screen-subtitle{font-size:12px;color:var(--muted);margin-top:4px}
+.settings-section{padding:20px 0;border-bottom:1px solid var(--border)}.settings-section:last-of-type{border-bottom:0}
+.setting-title{color:var(--purple2);font-size:13px;font-weight:700;letter-spacing:1px;margin-bottom:14px}
+.label{display:block;color:#aaa;font-size:11px;margin:12px 0 6px}
+.setting-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row-between{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.setting-name{font-size:14px}.setting-desc{font-size:11px;color:#666;margin-top:4px}
+.switch{position:relative;width:48px;height:26px;display:inline-block;flex:0 0 auto}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;background:#292930;border-radius:30px}.slider:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}.switch input:checked+.slider{background:var(--purple)}.switch input:checked+.slider:before{transform:translateX(22px)}
+.save{margin-top:22px}.save-msg{min-height:18px;text-align:center;color:var(--success);font-size:12px;margin-top:10px}
+
+/* Weather */
+.weather-main{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+.weather-current,.weather-list{background:#121218;border:1px solid var(--border);border-radius:18px;padding:20px}
+.weather-temp{font-size:64px;font-weight:300;margin:12px 0}.weather-desc{color:#aaa}.weather-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.meta{background:#17171d;border-radius:12px;padding:12px}.meta b{display:block;font-size:11px;color:#777;margin-bottom:5px}.meta span{font-size:14px}
+.forecast-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.forecast{background:#17171d;border-radius:12px;padding:12px;text-align:center}.forecast .day{color:#aaa;font-size:11px}.forecast .icon{font-size:25px;margin:8px 0}.forecast .temp{font-size:13px}
+
+/* Quran */
+.quran-layout{display:grid;grid-template-columns:270px 1fr;gap:16px}.surah-list{background:#121218;border:1px solid var(--border);border-radius:18px;padding:10px;max-height:65vh;overflow:auto}
+.surah-btn{width:100%;padding:11px;border:0;border-bottom:1px solid var(--border);background:transparent;color:#ddd;text-align:left;border-radius:8px}.surah-btn:hover,.surah-btn.active{background:#1a1820;color:white}
+.quran-reader{background:#121218;border:1px solid var(--border);border-radius:18px;padding:24px;min-height:65vh;overflow:auto}.quran-title{text-align:center;color:var(--purple2);font-size:24px;margin-bottom:20px}.ayah{font-size:20px;line-height:2;text-align:right;padding:13px 0;border-bottom:1px solid var(--border);direction:rtl}.ayah-number{color:var(--purple);font-size:13px;margin-left:8px}
+.quran-status{color:var(--muted);text-align:center;padding:30px}
+
+/* Water */
+.water-card{max-width:650px;margin:auto;text-align:center;background:#121218;border:1px solid var(--border);border-radius:20px;padding:30px}.water-count{font-size:64px;color:#8cc8ff;margin:15px}.water-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}.water-history{margin-top:20px;text-align:left}.water-row{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border);color:#aaa}.water-progress{height:10px;background:#24242d;border-radius:20px;overflow:hidden;margin:15px 0}.water-fill{height:100%;background:#6ebcff;width:0;transition:.2s}
+
+/* Toast / loading */
+.toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%) translateY(20px);background:#1a1a21;border:1px solid var(--border);padding:11px 16px;border-radius:12px;color:white;opacity:0;pointer-events:none;transition:.2s;z-index:20;font-size:12px}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.loading{color:#777;text-align:center;padding:25px}
+
+/* Mobile */
+@media(max-width:1100px){
+  .dashboard-grid{grid-template-columns:220px 1fr}
+  .content-grid{grid-template-columns:1fr 1fr}.content-grid .card:last-child{grid-column:span 2}
+}
+@media(max-width:750px){
+  .app{padding:0}.screen{min-height:100vh}.dashboard-grid{display:block;min-height:100vh}
+  .left-panel,.prayer-panel,.card,.bottom-nav{border-radius:16px;margin-bottom:10px}
+  .left-panel{min-height:300px}.prayers{grid-template-columns:repeat(3,1fr);gap:10px}.prayer{border:0}
+  .content-grid{display:block}.content-grid .card:last-child{grid-column:auto}
+  .bottom-nav{height:68px;position:sticky;bottom:0;z-index:10}
+  .secondary-shell{min-height:100vh;border-radius:0;padding:18px}.setting-grid,.weather-main,.quran-layout{grid-template-columns:1fr}
+  .forecast-row{grid-template-columns:repeat(5,1fr);overflow-x:auto}.forecast{min-width:80px}
+  .quran-reader{min-height:55vh}.clock{font-size:56px}.location{float:none;display:block;margin-top:6px}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<!-- ================= DASHBOARD ================= -->
+<section id="dashboardScreen" class="screen active">
+<div class="dashboard-grid">
+
+<aside class="left-panel">
+  <div>
+    <div class="moon">☾</div>
+    <div id="clock" class="clock">00:00</div>
+    <div id="date" class="date">Tarih</div>
+    <div class="line"></div>
+    <div class="small-title">YAKLAŞAN NAMAZ</div>
+    <div id="nextPrayer" class="next-prayer">Yükleniyor...</div>
+    <div id="countdown" class="countdown">Hesaplanıyor...</div>
+  </div>
+  <div class="mosque">🕌</div>
+</aside>
+
+<section class="panel prayer-panel">
+  <div class="panel-title">
+    EZAN VAKİTLERİ
+    <span id="locationText" class="location">Arnhem, Netherlands</span>
+  </div>
+  <div class="prayers">
+    <div class="prayer" data-prayer="imsak"><div class="prayer-icon">🌅</div><div class="prayer-name">İmsak</div><div id="imsak" class="prayer-time">--:--</div></div>
+    <div class="prayer" data-prayer="gunes"><div class="prayer-icon">☀️</div><div class="prayer-name">Güneş</div><div id="gunes" class="prayer-time">--:--</div></div>
+    <div class="prayer" data-prayer="ogle"><div class="prayer-icon">☀️</div><div class="prayer-name">Öğle</div><div id="ogle" class="prayer-time">--:--</div></div>
+    <div class="prayer" data-prayer="ikindi"><div class="prayer-icon">🌤️</div><div class="prayer-name">İkindi</div><div id="ikindi" class="prayer-time">--:--</div></div>
+    <div class="prayer" data-prayer="aksam"><div class="prayer-icon">🌇</div><div class="prayer-name">Akşam</div><div id="aksam" class="prayer-time">--:--</div></div>
+    <div class="prayer" data-prayer="yatsi"><div class="prayer-icon">🌙</div><div class="prayer-name">Yatsı</div><div id="yatsi" class="prayer-time">--:--</div></div>
+  </div>
+  <div id="apiStatus" class="status">Namaz vakitleri yükleniyor...</div>
+</section>
+
+<section class="content-grid">
+
+<div class="card">
+  <div class="panel-title">GÜNLÜK PLANLAR</div>
+  <div id="selectedDateLabel" class="setting-desc" style="margin-bottom:8px"></div>
+  <div id="planList" class="plan-list"></div>
+  <div class="form-row">
+    <input id="planTime" class="input" type="time">
+    <input id="planTitle" class="input" type="text" placeholder="Plan adı">
+  </div>
+  <div class="form-row"><input id="planLocation" class="input" type="text" placeholder="Konum / açıklama"></div>
+  <button id="addPlanButton" class="add-button">+ Plan Ekle</button>
+</div>
+
+<div class="card quote-card">
+  <div class="panel-title">GÜNÜN SÖZÜ</div>
+  <div>
+    <div class="quote-symbol">“</div>
+    <div id="quote" class="quote">Sabır, musibet karşısında sükûnettir.</div>
+    <div id="author" class="author">— Bediüzzaman Said Nursî</div>
+  </div>
+  <div id="quoteDots" class="dots"></div>
+</div>
+
+<div class="card">
+  <div class="panel-title">TAKVİM</div>
+  <div class="calendar-header">
+    <button id="prevMonth">‹</button>
+    <div id="monthName" class="calendar-month"></div>
+    <button id="nextMonth">›</button>
+  </div>
+  <div id="calendar" class="calendar-grid"></div>
+</div>
+
+</section>
+
+<nav class="bottom-nav">
+  <button class="nav-item" data-screen="weatherScreen"><span class="nav-icon">🌤️</span><span class="nav-label">Hava</span></button>
+  <button class="nav-item" data-screen="quranScreen"><span class="nav-icon">📖</span><span class="nav-label">Kur'an</span></button>
+  <button class="nav-item" data-screen="waterScreen"><span class="nav-icon">💧</span><span class="nav-label">Su</span></button>
+  <button class="nav-item" data-screen="settingsScreen"><span class="nav-icon">⚙️</span><span class="nav-label">Ayarlar</span></button>
+</nav>
+
+</div>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<section id="settingsScreen" class="screen">
+<div class="secondary"><div class="secondary-shell">
+  <div class="screen-header"><button class="back" data-screen="dashboardScreen">←</button><div><div class="screen-title">AYARLAR</div><div class="screen-subtitle">Dashboard'ı kişiselleştir</div></div></div>
+
+  <div class="settings-section">
+    <div class="setting-title">📍 KONUM</div>
+    <div class="setting-grid">
+      <div><label class="label">Şehir</label><input id="settingsCity" class="input"></div>
+      <div><label class="label">Ülke</label><input id="settingsCountry" class="input"></div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="setting-title">🕌 NAMAZ HESAPLAMA</div>
+    <div class="setting-grid">
+      <div><label class="label">Hesaplama yöntemi</label>
+        <select id="settingsMethod" class="select">
+          <option value="3">Muslim World League</option>
+          <option value="2">Islamic Society of North America</option>
+          <option value="13">Diyanet İşleri Başkanlığı</option>
+        </select>
+      </div>
+      <div><label class="label">Asr mezhebi</label>
+        <select id="settingsSchool" class="select"><option value="0">Şafiî</option><option value="1">Hanefî</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="setting-title">💭 GÜNÜN SÖZÜ</div>
+    <div class="row-between">
+      <div><div class="setting-name">Otomatik söz değişimi</div><div class="setting-desc">Sözleri belirli aralıklarla değiştir.</div></div>
+      <label class="switch"><input id="quoteEnabled" type="checkbox"><span class="slider"></span></label>
+    </div>
+    <label class="label">Değişme süresi</label>
+    <select id="quoteInterval" class="select"><option value="5">5 saniye</option><option value="10">10 saniye</option><option value="30">30 saniye</option><option value="60">1 dakika</option></select>
+  </div>
+
+  <div class="settings-section">
+    <div class="setting-title">🖥️ EKRAN</div>
+    <div class="row-between">
+      <div><div class="setting-name">Tam ekran</div><div class="setting-desc">Tablette mümkün olduğunca ekranı doldur.</div></div>
+      <button id="fullscreenBtn" class="primary" style="width:auto;padding:10px 15px">Tam Ekran</button>
+    </div>
+  </div>
+
+  <button id="saveSettings" class="primary save">DEĞİŞİKLİKLERİ KAYDET</button>
+  <div id="settingsMsg" class="save-msg"></div>
+</div></div>
+</section>
+
+<!-- ================= WEATHER ================= -->
+<section id="weatherScreen" class="screen">
+<div class="secondary"><div class="secondary-shell">
+  <div class="screen-header"><button class="back" data-screen="dashboardScreen">←</button><div><div class="screen-title">HAVA DURUMU</div><div id="weatherSubtitle" class="screen-subtitle">Konum yükleniyor...</div></div></div>
+  <div class="weather-main">
+    <div class="weather-current">
+      <div class="section-title">BUGÜN</div>
+      <div id="weatherTemp" class="weather-temp">--°</div>
+      <div id="weatherDesc" class="weather-desc">Yükleniyor...</div>
+      <div class="weather-meta">
+        <div class="meta"><b>HİSSEDİLEN</b><span id="feels">--°</span></div>
+        <div class="meta"><b>NEM</b><span id="humidity">--%</span></div>
+        <div class="meta"><b>RÜZGÂR</b><span id="wind">-- km/s</span></div>
+        <div class="meta"><b>YAĞIŞ</b><span id="rain">--%</span></div>
+      </div>
+    </div>
+    <div class="weather-list">
+      <div class="section-title" style="margin-bottom:14px">5 GÜNLÜK TAHMİN</div>
+      <div id="forecast" class="forecast-row"></div>
+    </div>
+  </div>
+</div></div>
+</section>
+
+<!-- ================= QURAN ================= -->
+<section id="quranScreen" class="screen">
+<div class="secondary"><div class="secondary-shell">
+  <div class="screen-header"><button class="back" data-screen="dashboardScreen">←</button><div><div class="screen-title">KUR'AN-I KERÎM</div><div class="screen-subtitle">Sure seç ve oku</div></div></div>
+  <div class="quran-layout">
+    <div id="surahList" class="surah-list"></div>
+    <div id="quranReader" class="quran-reader"><div class="quran-status">Bir sure seç.</div></div>
+  </div>
+</div></div>
+</section>
+
+<!-- ================= WATER ================= -->
+<section id="waterScreen" class="screen">
+<div class="secondary"><div class="secondary-shell">
+  <div class="screen-header"><button class="back" data-screen="dashboardScreen">←</button><div><div class="screen-title">SU TAKİBİ</div><div class="screen-subtitle">Bugünkü su tüketimini takip et</div></div></div>
+  <div class="water-card">
+    <div class="section-title">BUGÜN</div>
+    <div id="waterCount" class="water-count">0 ml</div>
+    <div class="water-progress"><div id="waterFill" class="water-fill"></div></div>
+    <div id="waterGoalText" class="setting-desc">Hedef: 2000 ml</div>
+    <div class="water-buttons" style="margin-top:20px">
+      <button id="water250" class="primary">+ 250 ml</button>
+      <button id="water500" class="primary">+ 500 ml</button>
+    </div>
+    <button id="waterReset" class="add-button" style="margin-top:10px">Bugünü Sıfırla</button>
+    <div id="waterHistory" class="water-history"></div>
+  </div>
+</div></div>
+</section>
+
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* =========================================================
+   V5 - SINGLE FILE SPA
+========================================================= */
+
+const defaultSettings = {
+  city:"Arnhem", country:"Netherlands", method:"3", school:"1",
+  quoteEnabled:true, quoteInterval:"10", waterGoal:2000
+};
+
+let settings = loadJSON("appSettings", defaultSettings);
+settings = {...defaultSettings, ...settings};
+
+function loadJSON(key, fallback){
+  try{
+    const value=localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  }catch(e){return fallback}
+}
+function saveJSON(key,value){localStorage.setItem(key,JSON.stringify(value))}
+function esc(value){
+  const d=document.createElement("div"); d.textContent=value ?? ""; return d.innerHTML;
+}
+
+const screens = [...document.querySelectorAll(".screen")];
+function showScreen(id){
+  screens.forEach(s=>s.classList.toggle("active",s.id===id));
+  document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.screen===id));
+  if(id==="weatherScreen") loadWeather();
+  if(id==="quranScreen") loadSurahList();
+  if(id==="settingsScreen") fillSettings();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("[data-screen]").forEach(el=>{
+  el.addEventListener("click",()=>showScreen(el.dataset.screen));
+});
+
+/* CLOCK */
+function updateClock(){
+  const now=new Date();
+  document.getElementById("clock").textContent =
+    String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  const days=["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+  const months=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  document.getElementById("date").innerHTML =
+    `${days[now.getDay()]}<br>${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+updateClock(); setInterval(updateClock,1000);
+
+/* PRAYER */
+let prayerTimes=[];
+function cleanTime(t){return t ? t.substring(0,5) : "--:--"}
+
+async function loadPrayerTimes(){
+  const now=new Date();
+  const date=`${String(now.getDate()).padStart(2,"0")}-${String(now.getMonth()+1).padStart(2,"0")}-${now.getFullYear()}`;
+  const url=`https://api.aladhan.com/v1/timingsByCity/${date}?city=${encodeURIComponent(settings.city)}&country=${encodeURIComponent(settings.country)}&method=${encodeURIComponent(settings.method)}&school=${encodeURIComponent(settings.school)}`;
+  const status=document.getElementById("apiStatus");
+  status.textContent="↻ Namaz vakitleri yükleniyor...";
+  try{
+    const r=await fetch(url);
+    if(!r.ok) throw new Error("API");
+    const j=await r.json();
+    if(j.code!==200 || !j.data) throw new Error("Veri");
+    const t=j.data.timings;
+    prayerTimes=[
+      {id:"imsak",name:"İmsak",time:cleanTime(t.Imsak)},
+      {id:"gunes",name:"Güneş",time:cleanTime(t.Sunrise)},
+      {id:"ogle",name:"Öğle",time:cleanTime(t.Dhuhr)},
+      {id:"ikindi",name:"İkindi",time:cleanTime(t.Asr)},
+      {id:"aksam",name:"Akşam",time:cleanTime(t.Maghrib)},
+      {id:"yatsi",name:"Yatsı",time:cleanTime(t.Isha)}
+    ];
+    prayerTimes.forEach(p=>document.getElementById(p.id).textContent=p.time);
+    document.getElementById("locationText").textContent=`${settings.city}, ${settings.country}`;
+    status.textContent=`✓ ${settings.city} için vakitler güncellendi`;
+    updatePrayer();
+  }catch(e){
+    console.error(e);
+    status.textContent="⚠ Namaz vakitleri alınamadı. İnternet bağlantısını kontrol et.";
+  }
+}
+function getNextPrayer(){
+  if(!prayerTimes.length)return null;
+  const now=new Date();
+  for(const p of prayerTimes){
+    const [h,m]=p.time.split(":").map(Number);
+    const d=new Date(); d.setHours(h,m,0,0);
+    if(d>now)return {...p,date:d};
+  }
+  const p=prayerTimes[0], d=new Date(); const [h,m]=p.time.split(":").map(Number);
+  d.setDate(d.getDate()+1); d.setHours(h,m,0,0); return {...p,date:d};
+}
+function updatePrayer(){
+  const next=getNextPrayer(); if(!next)return;
+  const diff=Math.max(0,next.date-new Date()), sec=Math.floor(diff/1000);
+  document.getElementById("nextPrayer").textContent=next.name+" Namazı";
+  document.getElementById("countdown").textContent=
+    `${Math.floor(sec/3600)} saat ${String(Math.floor(sec%3600/60)).padStart(2,"0")} dakika ${String(sec%60).padStart(2,"0")} saniye kaldı`;
+  document.querySelectorAll(".prayer").forEach(x=>x.classList.remove("active"));
+  document.querySelector(`[data-prayer="${next.id}"]`)?.classList.add("active");
+}
+setInterval(updatePrayer,1000);
+setInterval(loadPrayerTimes,30*60*1000);
+
+/* QUOTES */
+const quotes=[
+  {text:"Sabır, musibet karşısında sükûnettir.",author:"Bediüzzaman Said Nursî"},
+  {text:"İnsan, başıboş bırakılmamıştır.",author:"Kur'an-ı Kerîm"},
+  {text:"Şükür, nimetin devamına sebeptir.",author:"Risale-i Nur"},
+  {text:"Her şey Allah'ı tesbih eder.",author:"Risale-i Nur"}
+];
+let quoteIndex=0, quoteTimer=null;
+function renderQuote(){
+  const q=quotes[quoteIndex];
+  document.getElementById("quote").textContent=q.text;
+  document.getElementById("author").textContent="— "+q.author;
+  document.getElementById("quoteDots").innerHTML=quotes.map((_,i)=>`<span class="dot ${i===quoteIndex?"active":""}"></span>`).join("");
+}
+function restartQuoteTimer(){
+  clearInterval(quoteTimer);
+  if(settings.quoteEnabled){
+    quoteTimer=setInterval(()=>{quoteIndex=(quoteIndex+1)%quotes.length;renderQuote()},Number(settings.quoteInterval)*1000);
+  }
+}
+renderQuote(); restartQuoteTimer();
+
+/* PLANS + CALENDAR */
+let selectedDateKey=localDateKey(new Date()), calendarDate=new Date();
+const monthNames=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const dayNames=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
+function localDateKey(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function getPlans(){return loadJSON("dailyPlans",{})}
+function savePlans(v){saveJSON("dailyPlans",v)}
+function renderPlans(){
+  const all=getPlans(), plans=(all[selectedDateKey]||[]).sort((a,b)=>a.time.localeCompare(b.time));
+  document.getElementById("selectedDateLabel").textContent=selectedDateKey===localDateKey(new Date())?"Bugün":selectedDateKey;
+  const list=document.getElementById("planList");
+  if(!plans.length){list.innerHTML='<div class="empty">Bu gün için plan yok.</div>';return}
+  list.innerHTML=plans.map((p,i)=>`
+    <div class="plan">
+      <div class="plan-time">${esc(p.time)}</div>
+      <div><div class="plan-title">${esc(p.title)}</div>${p.location?`<div class="plan-location">${esc(p.location)}</div>`:""}</div>
+      <button class="delete-plan" data-delete-plan="${i}">×</button>
+    </div>`).join("");
+  list.querySelectorAll("[data-delete-plan]").forEach(b=>b.onclick=()=>{
+    const a=getPlans(); a[selectedDateKey].splice(Number(b.dataset.deletePlan),1); savePlans(a); renderPlans(); renderCalendar();
+  });
+}
+function addPlan(){
+  const time=document.getElementById("planTime").value,title=document.getElementById("planTitle").value.trim(),location=document.getElementById("planLocation").value.trim();
+  if(!time||!title){toast("Saat ve plan adı gerekli.");return}
+  const a=getPlans(); a[selectedDateKey]??=[]; a[selectedDateKey].push({time,title,location}); savePlans(a);
+  document.getElementById("planTime").value="";document.getElementById("planTitle").value="";document.getElementById("planLocation").value="";
+  renderPlans();renderCalendar();toast("Plan eklendi.");
+}
+document.getElementById("addPlanButton").onclick=addPlan;
+document.querySelectorAll("#planTime,#planTitle,#planLocation").forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter")addPlan()}));
+
+function renderCalendar(){
+  const cal=document.getElementById("calendar"); cal.innerHTML="";
+  dayNames.forEach(d=>{const x=document.createElement("div");x.className="calendar-day-name";x.textContent=d;cal.appendChild(x)});
+  const y=calendarDate.getFullYear(),m=calendarDate.getMonth();
+  document.getElementById("monthName").textContent=`${monthNames[m]} ${y}`;
+  let first=new Date(y,m,1).getDay(); first=first===0?6:first-1;
+  for(let i=0;i<first;i++)cal.appendChild(document.createElement("div"));
+  const days=new Date(y,m+1,0).getDate(), todayKey=localDateKey(new Date()), all=getPlans();
+  for(let d=1;d<=days;d++){
+    const date=new Date(y,m,d),key=localDateKey(date),x=document.createElement("div");
+    x.className="calendar-day"+(key===todayKey?" today":"")+(key===selectedDateKey?" selected-day":"");
+    x.innerHTML=`<span>${d}</span>${all[key]?.length?'<span class="calendar-dot">●</span>':""}`;
+    x.onclick=()=>{selectedDateKey=key;renderCalendar();renderPlans()};
+    cal.appendChild(x);
+  }
+}
+document.getElementById("prevMonth").onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar()};
+document.getElementById("nextMonth").onclick=()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar()};
+renderCalendar();renderPlans();
+
+/* SETTINGS */
+function fillSettings(){
+  document.getElementById("settingsCity").value=settings.city;
+  document.getElementById("settingsCountry").value=settings.country;
+  document.getElementById("settingsMethod").value=settings.method;
+  document.getElementById("settingsSchool").value=settings.school;
+  document.getElementById("quoteEnabled").checked=settings.quoteEnabled;
+  document.getElementById("quoteInterval").value=settings.quoteInterval;
+}
+document.getElementById("saveSettings").onclick=async()=>{
+  settings={
+    ...settings,
+    city:document.getElementById("settingsCity").value.trim(),
+    country:document.getElementById("settingsCountry").value.trim(),
+    method:document.getElementById("settingsMethod").value,
+    school:document.getElementById("settingsSchool").value,
+    quoteEnabled:document.getElementById("quoteEnabled").checked,
+    quoteInterval:document.getElementById("quoteInterval").value
+  };
+  if(!settings.city||!settings.country){toast("Şehir ve ülke gerekli.");return}
+  saveJSON("appSettings",settings);restartQuoteTimer();
+  document.getElementById("settingsMsg").textContent="Ayarlar kaydedildi.";
+  await loadPrayerTimes();
+  setTimeout(()=>showScreen("dashboardScreen"),500);
+};
+document.getElementById("fullscreenBtn").onclick=async()=>{
+  try{
+    if(!document.fullscreenElement) await document.documentElement.requestFullscreen();
+    else await document.exitFullscreen();
+  }catch(e){toast("Tam ekran bu cihazda desteklenmiyor.")}
+};
+fillSettings();
+
+/* WEATHER - Open-Meteo + geocoding */
+let weatherLoadedFor="";
+const weatherCodes={
+  0:"Açık",1:"Çoğunlukla açık",2:"Parçalı bulutlu",3:"Kapalı",
+  45:"Sis",48:"Kırağılı sis",51:"Hafif çiseleme",53:"Çiseleme",55:"Yoğun çiseleme",
+  61:"Hafif yağmur",63:"Yağmur",65:"Yoğun yağmur",71:"Hafif kar",73:"Kar",75:"Yoğun kar",
+  80:"Sağanak",81:"Sağanak",82:"Kuvvetli sağanak",95:"Gök gürültülü",96:"Dolu ihtimali",99:"Dolu ihtimali"
+};
+const weatherIcons={0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",71:"🌨️",73:"❄️",75:"❄️",80:"🌦️",81:"🌧️",82:"⛈️",95:"⛈️",96:"⛈️",99:"⛈️"};
+async function loadWeather(){
+  const key=settings.city+","+settings.country;
+  if(weatherLoadedFor===key)return;
+  weatherLoadedFor=key;
+  document.getElementById("weatherSubtitle").textContent=`${settings.city}, ${settings.country}`;
+  try{
+    const g=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(settings.city)}&count=1&language=tr&format=json`);
+    const gj=await g.json(); if(!gj.results?.length)throw Error("Konum bulunamadı");
+    const loc=gj.results[0];
+    const w=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=5`);
+    const j=await w.json(),c=j.current,d=j.daily;
+    document.getElementById("weatherTemp").textContent=Math.round(c.temperature_2m)+"°";
+    document.getElementById("weatherDesc").textContent=(weatherIcons[c.weather_code]||"🌤️")+" "+(weatherCodes[c.weather_code]||"Hava durumu");
+    document.getElementById("feels").textContent=Math.round(c.apparent_temperature)+"°";
+    document.getElementById("humidity").textContent=Math.round(c.relative_humidity_2m)+"%";
+    document.getElementById("wind").textContent=Math.round(c.wind_speed_10m)+" km/s";
+    document.getElementById("rain").textContent=(d.precipitation_probability_max[0]??0)+"%";
+    document.getElementById("forecast").innerHTML=d.time.map((day,i)=>`<div class="forecast"><div class="day">${i===0?"Bugün":new Date(day+"T12:00:00").toLocaleDateString("tr-TR",{weekday:"short"})}</div><div class="icon">${weatherIcons[d.weather_code[i]]||"🌤️"}</div><div class="temp">${Math.round(d.temperature_2m_max[i])}° / ${Math.round(d.temperature_2m_min[i])}°</div></div>`).join("");
+  }catch(e){
+    document.getElementById("weatherDesc").textContent="Hava durumu alınamadı.";
+  }
+}
+
+/* QURAN - Al Quran Cloud */
+let surahsLoaded=false;
+async function loadSurahList(){
+  if(surahsLoaded)return;
+  const list=document.getElementById("surahList");list.innerHTML='<div class="loading">Sureler yükleniyor...</div>';
+  try{
+    const r=await fetch("https://api.alquran.cloud/v1/surah");const j=await r.json();
+    if(j.code!==200)throw Error();
+    list.innerHTML=j.data.map(s=>`<button class="surah-btn" data-surah="${s.number}">${s.number}. ${esc(s.englishName)}<br><small style="color:#777">${esc(s.name)}</small></button>`).join("");
+    list.querySelectorAll("[data-surah]").forEach(b=>b.onclick=()=>loadSurah(Number(b.dataset.surah),b));
+    surahsLoaded=true;
+  }catch(e){list.innerHTML='<div class="quran-status">Sure listesi alınamadı.</div>'}
+}
+async function loadSurah(number,button){
+  document.querySelectorAll(".surah-btn").forEach(b=>b.classList.remove("active"));button?.classList.add("active");
+  const reader=document.getElementById("quranReader");reader.innerHTML='<div class="quran-status">Sure yükleniyor...</div>';
+  try{
+    const r=await fetch(`https://api.alquran.cloud/v1/surah/${number}/quran-uthmani`);
+    const j=await r.json();if(j.code!==200)throw Error();
+    reader.innerHTML=`<div class="quran-title">${esc(j.data.name)}<div style="font-size:12px;color:#777;margin-top:6px">${esc(j.data.englishName)}</div></div>`+
+      j.data.ayahs.map(a=>`<div class="ayah"><span class="ayah-number">﴿${a.numberInSurah}﴾</span>${esc(a.text)}</div>`).join("");
+  }catch(e){reader.innerHTML='<div class="quran-status">Sure yüklenemedi. İnternet bağlantısını kontrol et.</div>'}
+}
+
+/* WATER */
+function waterKey(){return "water-"+localDateKey(new Date())}
+function getWater(){return Number(localStorage.getItem(waterKey())||0)}
+function renderWater(){
+  const amount=getWater(),goal=Number(settings.waterGoal)||2000;
+  document.getElementById("waterCount").textContent=amount+" ml";
+  document.getElementById("waterGoalText").textContent=`Hedef: ${goal} ml`;
+  document.getElementById("waterFill").style.width=Math.min(100,amount/goal*100)+"%";
+  document.getElementById("waterHistory").innerHTML=amount?`<div class="water-row"><span>Bugün</span><span>${amount} ml</span></div>`:"<div class='empty'>Henüz kayıt yok.</div>";
+}
+function addWater(ml){localStorage.setItem(waterKey(),getWater()+ml);renderWater();toast(ml+" ml eklendi.")}
+document.getElementById("water250").onclick=()=>addWater(250);
+document.getElementById("water500").onclick=()=>addWater(500);
+document.getElementById("waterReset").onclick=()=>{localStorage.removeItem(waterKey());renderWater();toast("Bugünkü su kaydı sıfırlandı.")};
+renderWater();
+
+/* Navigation invalidates weather after settings save */
+const oldSaveSettings=document.getElementById("saveSettings");
+document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>{
+  if(b.dataset.screen==="weatherScreen")weatherLoadedFor="";
+}));
+
+function toast(message){
+  const t=document.getElementById("toast");t.textContent=message;t.classList.add("show");
+  clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+/* Init */
+document.getElementById("locationText").textContent=`${settings.city}, ${settings.country}`;
+loadPrayerTimes();
+</script>
+</body>
+</html>
